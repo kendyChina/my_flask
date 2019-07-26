@@ -26,7 +26,6 @@ def upload_tmp_img():
 			data = {"data": (img, payload, content_type)}
 			resp = requests.post(url, files=data, params=params, headers=headers)
 
-			print(resp.text)
 			media_id = json.loads(resp.text)["media_id"]
 			xm_id[xm] = media_id
 
