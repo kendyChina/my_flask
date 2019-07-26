@@ -17,18 +17,22 @@ def upload_tmp_img():
 		resp = requests.post(url, data=data)
 
 		params = {
-			"media": {
-				"filename": img,
-				"filelength": os.path.getsize(img),
-				# "content-type": "multipart/form-data"
-			},
+			# "media": {
+			# 	"filename": img,
+			# 	"filelength": os.path.getsize(img),
+			# 	# "content-type": "multipart/form-data"
+			# },
 			"access_token": access_token,
 			"type": "image"
 		}
 		with open(img, "rb") as f:
 			payload = f.read()
+		content_type = "multipart/form-data"
 		headers = {
-			"Content-Type": "multipart/form-data"
+			"Content-Type": content_type
+		}
+		data = {
+			"data": (xm, payload, content_type)
 		}
 		resp = requests.post(url, data=payload, params=params, headers=headers)
 

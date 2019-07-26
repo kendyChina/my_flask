@@ -81,15 +81,14 @@ def get_xm(xm):
 
 	# 设置标题
 	plt.title("%s订单情况" % xm)
-	# 保存为png
-
-	target = os.path.join(target_path, "%s.png" % xm)
+	# 保存为jpg
+	target = os.path.join(target_path, "%s.jpg" % xm)
 	plt.savefig(target, dpi=150)
 	plt.close()
 	xm_img.append(target)
 	with sqlite3.connect("db.db") as conn:
 		c = conn.cursor()
-		c.execute("INSERT INTO xm_img VALUES (?, ?);", (xm, target))
+		c.execute("INSERT INTO xm_img VALUES (?, ?);", (xm, "%s.jpg" % xm))
 
 
 def run_jf():
