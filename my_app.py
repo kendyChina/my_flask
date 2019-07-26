@@ -59,9 +59,9 @@ def index():
 
 		with sqlite3.connect("db.db") as conn:
 			c = conn.cursor()
-			c.execute("SELECT media FROM xm_media WHERE xm=?", (xm, ))
+			c.execute("SELECT media_id FROM xm_media WHERE xm=?", (xm, ))
 			media_id = c.fetchone()
-		print("msg_type: %s\nToUserName: %s\nFromUserName: %s\nContent: %s" % (msg_type, ToUserName, FromUserName, media_id))
+		print("msg_type: %s\nToUserName: %s\nFromUserName: %s\nMediaId: %s" % (msg_type, ToUserName, FromUserName, media_id))
 
 		resp = make_response(
 			msg % 
