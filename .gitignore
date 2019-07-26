@@ -1,0 +1,14 @@
+# csv
+csv/
+
+# img
+img/
+
+#cache
+__pycache__/
+
+#passwd
+passwd.txt
+
+#pyCharm
+.idea/
