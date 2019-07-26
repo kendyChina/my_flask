@@ -44,7 +44,7 @@ class get_token(object):
 
 				resp = requests.get(self.url, params=data)
 				# json化
-				resp = json.loads(resp.content)
+				resp = json.loads(resp.text)
 				print(resp)
 				access_token = resp["access_token"]
 				expires_in = resp["expires_in"]
@@ -57,7 +57,7 @@ class get_token(object):
 					VALUES (?, ?);""", (access_token, token_time))
 
 				print("Has update access_token(%s) and token_time(%s)" % (access_token, time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(token_time)),))
-			return access_token
+		return access_token
 
 if __name__ == "__main__":
 	a = get_token()

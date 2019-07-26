@@ -15,11 +15,11 @@ msg = """
 	<FromUserName><![CDATA[%s]]></FromUserName>
 	<CreateTime>%s</CreateTime>
 	<MsgType><![CDATA[%s]]></MsgType>
-	<Content><![CDATA[%s]]></Content>
+	<Image>
+   	 <MediaId><![CDATA[%s]]></MediaId>
+  	</Image>
 	</xml>
 """
-
-xm_img = run_jf()
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -48,33 +48,27 @@ def index():
 	# 接收用户主动发送的信息
 	else:
 
-		# 如果当前时间在超时的5分钟内
-		with sqlite3.connect("db.db") as conn:
-			c = conn.cursor()
-			c.execute("""select * from access_token""")
-			access_token, tokentime = c.fetchone()
-		if time.time() > tokentime - 300:
-			access_token = get_token().get_token()
+		access_token = get_token().get_token()
 
 		xmlData = ET.fromstring(request.stream.read())
-		msg_type = xmlData.find('MsgType').text
+		# msg_type = xmlData.find('MsgType').text
+		msg_type = "image"
 		ToUserName = xmlData.find('ToUserName').text
 		FromUserName = xmlData.find('FromUserName').text
-		Content = xmlData.find('Content').text
-		print("msg_type: %s\nToUserName: %s\nFromUserName: %s\nContent: %s" % (msg_type, ToUserName, FromUserName, Content))
-		# signature = request.args.get("signature")
-		# timestamp = request.args.get("timestamp")
-		# nonce = request.args.get("nonce")
-		# openid = request.args.get("openid")
+		xm = xmlData.find('Content').text
+
+		with sqlite3.connect("db.db") as conn:
+			c = conn.cursor()
+			c.execute("SELECT media_id FROM xm_media WHERE xm=?", (xm, ))
+			media_id = c.fetchone()
+		print("msg_type: %s\nToUserName: %s\nFromUserName: %s\nContent: %s" % (msg_type, ToUserName, FromUserName, media_id))
+
 		resp = make_response(
 			msg % 
-			(FromUserName, ToUserName, str(int(time.time())), msg_type, Content)
+			(FromUserName, ToUserName, str(int(time.time())), msg_type, media_id)
 		)
 		resp.content_type = "application/xml"
 		return resp
-
-
-		
 
 if __name__ == "__main__":
 	app.run(host="0.0.0.0", port="80")
