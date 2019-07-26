@@ -88,7 +88,7 @@ def get_xm(xm):
 	xm_img.append(target)
 	with sqlite3.connect("db.db") as conn:
 		c = conn.cursor()
-		c.execute("INSERT INTO xm_img VALUES (?, ?);", (xm, "%s.jpg" % xm))
+		c.execute("INSERT INTO xm_img VALUES (?, ?);", (xm, target))
 
 
 def run_jf():
