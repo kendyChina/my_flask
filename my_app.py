@@ -3,22 +3,32 @@
 from flask import Flask, request, make_response
 import hashlib, time, requests, sqlite3
 import xml.etree.ElementTree as ET
-from my_flask.get_acc_token import get_token
-from my_flask.jf import run_jf
 
 app = Flask(__name__)
 access_token = None
 
-msg = """
+db = "db.db"
+
+img_msg = """
 	<xml>
+		<ToUserName><![CDATA[%s]]></ToUserName>
+		<FromUserName><![CDATA[%s]]></FromUserName>
+		<CreateTime>%s</CreateTime>
+		<MsgType><![CDATA[image]]></MsgType>
+		<Image>
+			<MediaId><![CDATA[%s]]></MediaId>
+		</Image>
+	</xml>
+"""
+
+text_msg = """
+<xml>
 	<ToUserName><![CDATA[%s]]></ToUserName>
 	<FromUserName><![CDATA[%s]]></FromUserName>
 	<CreateTime>%s</CreateTime>
-	<MsgType><![CDATA[%s]]></MsgType>
-	<Image>
-   	 <MediaId><![CDATA[%s]]></MediaId>
-  	</Image>
-	</xml>
+	<MsgType><![CDATA[text]]></MsgType>
+	<Content><![CDATA[%s暂无后台数据]]></Content>
+</xml>
 """
 
 @app.route("/", methods=["GET", "POST"])
@@ -34,39 +44,35 @@ def index():
 		timestamp = request.args.get("timestamp")
 		nonce = request.args.get("nonce")
 		l = [token, timestamp, nonce]
-		l.sort()
+		try:
+			l.sort()
+		except Exception:
+			print(request.url)
 		ll = ''.join(l)
 		my_sha1 = hashlib.sha1(ll.encode("utf-8"))
 		my_sign = my_sha1.hexdigest()
 		if my_sign == signature:
-			# print(my_sign)
 			return echostr
 		else:
-			# print(signature)
-			# print(my_sign)
 			return False
 	# 接收用户主动发送的信息
 	else:
 
-		access_token = get_token().get_token()
-
-		xmlData = ET.fromstring(request.stream.read())
+		xmlData = ET.fromstring(request.stream.read()) # 读取XML
 		# msg_type = xmlData.find('MsgType').text
-		msg_type = "image"
-		ToUserName = xmlData.find('ToUserName').text
-		FromUserName = xmlData.find('FromUserName').text
-		xm = xmlData.find('Content').text
+		ToUserName = xmlData.find('ToUserName').text # 用户信息的目的user
+		FromUserName = xmlData.find('FromUserName').text # 用户信息的来源user
+		content = xmlData.find('Content').text # 用户信息的内容
 
-		with sqlite3.connect("db.db") as conn:
+		with sqlite3.connect(db) as conn:
 			c = conn.cursor()
-			c.execute("SELECT media_id FROM xm_media WHERE xm=?", (xm, ))
+			c.execute("SELECT media_id FROM xm_media WHERE xm=?", (content, ))
 			media_id = c.fetchone()[0]
-		print("msg_type: %s\nToUserName: %s\nFromUserName: %s\nMediaId: %s" % (msg_type, ToUserName, FromUserName, media_id))
 
-		resp = make_response(
-			msg % 
-			(FromUserName, ToUserName, str(int(time.time())), msg_type, media_id)
-		)
+		if media_id is not None: # 后台有该字段的数据
+			resp = make_response(img_msg % (FromUserName, ToUserName, str(int(time.time())), media_id))
+		else: # 暂无该字段数据
+			resp = make_response(text_msg % (FromUserName, ToUserName, str(int(time.time())), content))
 		resp.content_type = "application/xml"
 		return resp
 

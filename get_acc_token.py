@@ -2,63 +2,63 @@
 
 import requests, json, sqlite3, time, os
 
-class get_token(object):
+url="https://api.weixin.qq.com/cgi-bin/token" # 获取access_token的url
+appid="wxf9d2bfcde559934c" # 公众号appid
+db = "db.db" # 数据库名称
+passwd_name = "passwd.txt" # 公众号密码文件
 
-	def __init__(self, url="https://api.weixin.qq.com/cgi-bin/token", appid="wxf9d2bfcde559934c", acc_db = "db.db", acc_table = "access_token"):
-		self.url = url
-		self.appid = appid
-		self.acc_db = acc_db
-		self.acc_table = acc_table
+def get_passwd():
+	# my_dir = os.path.dirname(os.path.realpath(__file__))
+	my_dir = r"./"
+	passwd_file = os.path.join(my_dir, passwd_name)
+	# 获取公众号密码
+	if os.path.exists(passwd_file):
+		with open(passwd_file, "r") as f:
+			passwd = f.readline().strip()
+	else:
+		passwd = input("请输入公众号密码：")
+	return passwd
 
-	def get_passwd(self):
-		my_dir = os.path.dirname(os.path.realpath(__file__))
-		passwd_name = "passwd.txt"
-		passwd_file = os.path.join(my_dir, passwd_name)
-		if os.path.exists(passwd_file):
-			with open(passwd_file, "r") as f:
-				passwd = f.readline().strip()
-		else:
-			passwd = input("请输入公众号密码：")
-		print("passwd: %s" % passwd)
-		return passwd
+def get_token():
+	with sqlite3.connect(db) as conn:
+		c = conn.cursor()
+		c.execute("SELECT * FROM access_token") # 从数据库获取access_token和token_time
 
-	def get_token(self):
-		with sqlite3.connect(self.acc_db) as conn:
-			c = conn.cursor()
-			c.execute("SELECT * FROM %s" % (self.acc_table, ))
-
-			access_token, token_time = c.fetchone()
+		access_token, token_time = c.fetchone()
+		if token_time is not None:
 			token_time = float(token_time)
+		else:
+			token_time = float(0)
 
-			# 如果现在超时时间前5分钟多，获取新的access_token
-			if time.time() > token_time - 300:
+		# 如果现在超时时间前5分钟多，获取新的access_token
+		if time.time() > token_time - 300:
 
-				print("token_time(%s)快超时了，正在尝试获取新access_token..." % (time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(token_time)), ))
-				data = {}
-				data["grant_type"] = "client_credential"
-				data["appid"] = self.appid
-				data["secret"] = self.get_passwd()
+			print("token_time(%s)快超时了，正在尝试获取新access_token..." % (time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(token_time)), ))
+			data = {
+				"grant_type": "client_credential", # 获取access_token填写client_credential
+				"appid": appid, # 公众号id
+				"secret": get_passwd() # 公众号密码
+			}
 
-				headers = {}
-				headers["Content-Type"] = "application/json; encoding=utf-8"
+			headers = {
+				"Content-Type": "application/json; encoding=utf-8"
+			}
 
-				resp = requests.get(self.url, params=data)
-				# json化
-				resp = json.loads(resp.text)
-				print(resp)
+			resp = json.loads(requests.get(url, params=data, headers=headers).text)
+
+			try:
 				access_token = resp["access_token"]
 				expires_in = resp["expires_in"]
-				token_time = time.time() + expires_in
+			except Exception as e:
+				print(e)
+				access_token = None
+				expires_in = None
+			token_time = time.time() + expires_in
 
-				# 删除原access_token和过期时间
-				c.execute("""DELETE FROM access_token;""")
-				# 插入新access_token和过期时间
-				c.execute("""INSERT INTO access_token
-					VALUES (?, ?);""", (access_token, token_time))
-
-				print("Has update access_token(%s) and token_time(%s)" % (access_token, time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(token_time)),))
-		return access_token
+			c.execute("""DELETE FROM access_token;""") # 删除原access_token和过期时间
+			c.execute("""INSERT INTO access_token VALUES (?, ?);""", (access_token, token_time)) # 插入新access_token和过期时间
+			print("Has updated access_token(%s) and token_time(%s)" % (access_token, time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(token_time)),))
+	return access_token
 
 if __name__ == "__main__":
-	a = get_token()
-	a.get_passwd()
+	get_token()
