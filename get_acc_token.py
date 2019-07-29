@@ -24,11 +24,12 @@ def get_token():
 		c = conn.cursor()
 		c.execute("SELECT * FROM access_token") # 从数据库获取access_token和token_time
 
-		access_token, token_time = c.fetchone()
-		if token_time is not None:
-			token_time = float(token_time)
-		else:
+		try:
+			access_token, token_time = c.fetchone()
+		except:
 			token_time = float(0)
+		else:
+			token_time = float(token_time)
 
 		# 如果现在超时时间前5分钟多，获取新的access_token
 		if time.time() > token_time - 300:

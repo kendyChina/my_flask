@@ -67,7 +67,10 @@ def index():
 		with sqlite3.connect(db) as conn:
 			c = conn.cursor()
 			c.execute("SELECT media_id FROM xm_media WHERE xm=?", (content, ))
-			media_id = c.fetchone()[0]
+			try:
+				media_id = c.fetchone()[0]
+			except:
+				media_id = None
 
 		if media_id is not None: # 后台有该字段的数据
 			resp = make_response(img_msg % (FromUserName, ToUserName, str(int(time.time())), media_id))
