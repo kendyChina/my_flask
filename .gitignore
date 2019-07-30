@@ -1,5 +1,6 @@
 # csv
 csv/
+csv_temp/
 
 # img
 img/
@@ -12,3 +13,6 @@ passwd.txt
 
 #pyCharm
 .idea/
+
+#ftp_upload
+upload_jf.py
