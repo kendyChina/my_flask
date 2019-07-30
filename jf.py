@@ -142,6 +142,7 @@ def run_jf():
 		c.execute("DELETE FROM xm_img;") # 删除所有xm_img内容，以便重新插入
 		for xm in xm_set:
 			draw_jpg(xm, get_img(xm))
+			print("%s绘制结束" % xm)
 		for xm, img in xm_img.items():
 			c.execute("INSERT INTO xm_img VALUES (?, ?)", (xm, img))
 	return xm_img
