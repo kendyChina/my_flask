@@ -32,7 +32,7 @@ def upload_tmp_img():
 			xm_id[xm] = media_id
 
 			c.execute("INSERT INTO xm_media VALUES (?, ?)", (xm, media_id)) # 把xm和media_id记录到数据库
-	print(xm_id)
+			print("%smedia_id获取成功！" % xm)
 
 if __name__ == "__main__":
 	upload_tmp_img()
