@@ -5,7 +5,7 @@ import requests, json, sqlite3, time, os
 url="https://api.weixin.qq.com/cgi-bin/token" # 获取access_token的url
 appid="wxf9d2bfcde559934c" # 公众号appid
 db = "db.db" # 数据库名称
-passwd_file = "gzh_passwd.txt" # 公众号密码文件
+passwd_file = "passwd/gzh_passwd.txt" # 公众号密码文件
 
 def get_passwd():
 	# 获取公众号密码
