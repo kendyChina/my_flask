@@ -16,7 +16,7 @@ logger.setLevel(logging.DEBUG)
 handler1.setLevel(logging.DEBUG)
 handler2.setLevel(logging.WARNING)
 
-formatter = logging.Formatter("%(asctime)s %(name)s:%(levelname)s:%(message)s")
+formatter = logging.Formatter("%(asctime)s:%(levelname)s:%(message)s")
 handler1.setFormatter(formatter)
 handler2.setFormatter(formatter)
 
@@ -34,10 +34,18 @@ def get_ftp_passwd():
     return ftp_passwd
 
 def get_jf():
+    """
+    读取经分明细
+    判断更新情况
+    若已更新则替换，并返回True
+    反之则返回False
+    :return:
+    """
     url = r"http://kingcard.gz.gd.unicom.local/static/document/jingfen_detail.csv"
     resp = requests.get(url)
     if resp.status_code != 200:
         logger.warning("经分网址返回码非200：%s" % resp.content)
+        return False
     if os.path.exists(temp_file) is True:
         with open(temp_file, "rb") as f:
             md5_temp = hashlib.md5(f.read())
@@ -50,27 +58,13 @@ def get_jf():
     logger.warning("经分明细更新成功！")
     return True
 
-def upload_jf():
-    host = "139.155.117.186"
-    username = "kendy"
-    ftp_passwd = get_ftp_passwd()
-    with ftplib.FTP(host, user=username, passwd=ftp_passwd) as ftp:
-        bufsize = 1024
-        try:
-            logger.info("开始上传ftp文件...")
-            with open(temp_file, "rb") as f:
-                ftp.storbinary("STOR %s" % remote_file, f, bufsize)
-            logger.warning("上传ftp文件成功！")
-        except Exception as e:
-            logger.exception(e)
-
-def run():
-    while get_jf() == False:
-        logger.info("十分钟后重试...")
-        time.sleep(600) # 十分钟
-    upload_jf()
-
-def test():
+def proc_remote():
+    """
+    上传经分明细
+    运行远端jf.py
+    运行远端upload_tmp_img.py
+    :return:
+    """
     host_dict = {
         "host": "139.155.117.186",
         "port": 22,
@@ -78,32 +72,32 @@ def test():
         "passwd": get_ftp_passwd()
     }
     chdir = "cd %s;" % os.path.join("/home/code/", os.path.dirname(__file__).split("/")[-1])
+    export_pypath = "export PYTHONPATH=$PYTHONPATH:/home/code;"
     ssh = SSHConnection.SSHConnection(host_dict)
     ssh.connect()
-    # logger.info("开始上传经分明细...")
-    # ssh.upload(temp_file, remote_file)
-    # logger.warning("经分明细上传成功！")
-    logger.info("开始运行jf.py...")
-    try:
-        resp = ssh.run_cmd(chdir + "python jf.py")
-        logger.info(resp)
-        logger.warning("jf.py运行成功！")
-    except Exception as e:
-        logger.exception(e)
-    logger.info("开始运行upload_tmp_img.py...")
-    try:
-        resp = ssh.run_cmd(chdir + "python upload_tmp_img.py")
-        logger.info(resp)
-        logger.warning("upload_tmp_img.py运行成功！")
-    except Exception as e:
-        logger.exception(e)
+    logger.warning("开始上传经分明细...")
+    ssh.upload(temp_file, remote_file)
+    logger.warning("经分明细上传成功！")
+    for py_file in ["jf.py", "upload_tmp_img.py"]:
+        logger.warning("开始运行%s..." % py_file)
+        try:
+            resp = ssh.run_cmd(chdir + export_pypath + "python %s" % py_file)
+            logger.info(resp)
+            logger.warning("%s运行成功！" % py_file)
+        except Exception as e:
+            logger.exception(e)
+
     ssh.close()
 
+def run():
+    while get_jf() == False:
+        logger.info("十分钟后重试...")
+        time.sleep(600) # 十分钟
+    proc_remote()
+
+
 if __name__ == "__main__":
-    # schedule.every().day.at("06:00").do(run)
-    #
-    # while True:
-    #     schedule.run_pending()
-    # get_jf()
-    # upload_jf()
-    test()
+    schedule.every().day.at("06:00").do(run)
+
+    while True:
+        schedule.run_pending()
