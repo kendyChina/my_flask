@@ -1,11 +1,12 @@
 # coding: utf-8
 
 from flask import Flask, request, make_response
-import hashlib, time, requests, sqlite3
+import hashlib, time, requests, sqlite3, logging
 import xml.etree.ElementTree as ET
 
 app = Flask(__name__)
 access_token = None
+logging.basicConfig(filename="log/my_app.log")
 
 db = "db.db"
 
@@ -66,7 +67,7 @@ def index():
 
 		with sqlite3.connect(db) as conn:
 			c = conn.cursor()
-			c.execute("SELECT media_id FROM xm_media WHERE xm=?", (content, ))
+			c.execute("SELECT media_id FROM key_media WHERE key=?", (content, ))
 			try:
 				media_id = c.fetchone()[0]
 			except:

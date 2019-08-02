@@ -5,14 +5,20 @@ csv_temp/
 # img
 img/
 
-#cache
+# cache
 __pycache__/
 
-#passwd
-passwd.txt
+# passwd
+passwd/
 
-#pyCharm
+# pyCharm
 .idea/
 
-#ftp_upload
+# ftp_upload
 upload_jf.py
+
+# test
+test*
+
+# log
+log/

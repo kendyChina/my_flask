@@ -7,10 +7,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import sqlite3
 
-mx_path = r"./csv" # 明细存放目录
-mx_name = r"jf.csv" # 明细文件名
-mx_file = os.path.join(mx_path, mx_name) # 明细路径
-target_path = r"./img" # 输出目标文件夹
+mx_file = r"csv/jf.csv" # 明细路径
+target_path = r"img" # 输出目标文件夹
 
 sns.set_style({"font.sans-serif": ["simhei", "Arial"]}) # 设置字体风格
 
@@ -22,11 +20,14 @@ jf["外部下单日期"] = jf["外部下单时间"].map(lambda x: str(x)[:10]) #
 jf["激活日期"] = jf["入网时间"].map(lambda x: str(x)[:10]) # 获取激活日期，前十位
 jf["首次充值日期"] = jf["首次充值时间"].map(lambda x: str(x)[:10]) # 获取首充日期，前十位
 jf["首充≥50"] = jf["首次充值金额"].map(lambda x: "是" if x >= 50 else None) # 判断首充≥50
+jf["激活月份"] = jf["激活月份"].map(lambda x: str(x)[:6])
+jf["充值月份"] = jf["充值月份"].map(lambda x: str(x)[:6])
 
-xm_set = set(jf["项目"])
-xm_img = {}
+xm_set = set(jf["项目"]) # 项目set
+hyb_set = set(jf["行业部"]) # 行业部set
+key_img = {}
 
-def draw_jpg(xm, df):
+def draw_jpg(key, title, df):
 
 	# 隔行设置row颜色：灰白相间
 	rowcolor = []
@@ -65,15 +66,25 @@ def draw_jpg(xm, df):
 
 	plt.axis("off")
 
-	plt.title("%s订单情况(%s日)" % (xm, time.strftime("%m-%d", time.localtime(time.time())))) # 设置标题
+	plt.title(
+		"%s订单情况(%s日)" % (title, time.strftime("%m-%d", time.localtime(time.time()))),
+		fontsize=18,
+		verticalalignment="center",
+		# horizontalalignment="left",
+		fontweight="black",
+		color="#000000",
+		x=0.35
+	) # 设置标题
 
 	plt.gcf().set_size_inches(10.0/1.5, 15.0/1.5)
-	target = os.path.join(target_path, r"%s.jpg" % xm) # 保存为jpg
+	target = os.path.join(target_path, r"%s.jpg" % key) # 保存为jpg
 	plt.savefig(target, bbox_inches="tight", pad_inches=0.5)
 	plt.close()
 
-	xm_img[xm] = target
+	key_img[key] = target
 
+# 获取本月的index
+# 及上个月的年月，首日
 def get_two_month_dates():
 	# 获取本月的年月
 	this_year = datetime.datetime.now().year
@@ -86,44 +97,50 @@ def get_two_month_dates():
 	# 获取上月的最后一天
 	prev_last_day = this_first_day - datetime.timedelta(days=1)
 
-	# 通过上月的最后一天获取上月的天数
-	prev_periods = prev_last_day.day
+	# 通过上月的最后一天获取上月的年月
+	prev_year = str(prev_last_day.year)
+	prev_month = str(prev_last_day.month).zfill(2)
+	prev_year_month = prev_year + prev_month # yyyymm
+	prev_first_day = prev_year + "-" + prev_month # yyyy-mm
 
-	# 获取近两个月的日期索引
+	# 获取本月的日期索引
 	this_dates = pd.date_range(start=this_first_day, end=this_today).strftime("%Y-%m-%d")
-	prev_dates = pd.date_range(end=prev_last_day, periods=prev_periods).strftime("%Y-%m-%d")
 
-	return (this_dates, prev_dates)
+	return (this_dates, prev_year_month, prev_first_day)
 
-def get_img(xm):
+def get_img(head, key):
 
-	xmmx = jf[jf["项目"] == xm] # 项目明细
+	mx = jf[jf[head] == key] # 明细
 
-	this_dates, prev_dates = get_two_month_dates()
+	this_dates, prev_year_month, prev_first_day = get_two_month_dates()
 	colunms = ["订单量", "激活量", "激活率", "首充≥50", "充值率", "综转率", "当日激活", "当日产能"]
-	# prev_df = pd.DataFrame(data=None, index=prev_dates, columns=colunms)
-	# for date in prev_dates:
-	# 	date_df = xmmx["外部下单日期"] == date
-	# 	prev_df.loc[date, "订单量"] = xmmx[date_df]["外部订单号"].count()
-	# 	prev_df.loc[date, "激活量"] = xmmx[date_df]["入网时间"].count()
-	# 	prev_df.loc[date, "首充≥50"] = xmmx[date_df]["首充≥50"].count()
-	# 	prev_df.loc[date, "当日激活"] = xmmx[xmmx["激活日期"] == date]["激活日期"].count()
-	# 	prev_df.loc[date, "当日产能"] = xmmx[xmmx["首次充值时间"] == date]["首充≥50"].count()
-	# prev_df.loc["%s月汇总" % prev_dates[0][5:7]] = prev_df.apply(lambda x: x.sum())
-	# prev_df = pd.DataFrame(data=prev_df.tail(1))
-	# prev_df["激活率"] = (prev_df["激活量"] / prev_df["订单量"]).apply(lambda x: format(x, ".2%"))
-	# prev_df["充值率"] = (prev_df["首充≥50"] / prev_df["激活量"]).apply(lambda x: format(x, ".2%"))
-	# prev_df["综转率"] = (prev_df["首充≥50"] / prev_df["订单量"]).apply(lambda x: format(x, ".2%"))
-	# print(prev_df)
+	index = "%s月汇总" % prev_first_day[-2:]
+	prev_df = pd.DataFrame(data=None, index=[index, ], columns=colunms)
+
+	month_df = mx["下单月份"] == prev_first_day
+	prev_df.loc[index, "订单量"] = mx[month_df]["外部订单号"].count()
+	prev_df.loc[index, "激活量"] = mx[month_df]["入网时间"].count()
+	prev_df.loc[index, "首充≥50"] = mx[month_df]["首充≥50"].count()
+	prev_df.loc[index, "当日激活"] = mx[mx["激活月份"] == prev_year_month]["激活月份"].count()
+	prev_df.loc[index, "当日产能"] = mx[mx["充值月份"] == prev_year_month]["充值月份"].count()
+
+	try:
+		prev_df["激活率"] = (prev_df["激活量"] / prev_df["订单量"]).apply(lambda x: format(x, ".2%"))
+		prev_df["充值率"] = (prev_df["首充≥50"] / prev_df["激活量"]).apply(lambda x: format(x, ".2%"))
+		prev_df["综转率"] = (prev_df["首充≥50"] / prev_df["订单量"]).apply(lambda x: format(x, ".2%"))
+	except:
+		prev_df["激活率"] = format(0, ".2%")
+		prev_df["充值率"] = format(0, ".2%")
+		prev_df["综转率"] = format(0, ".2%")
 
 	this_df = pd.DataFrame(data=None, index=this_dates, columns=colunms)
 	for date in this_dates:
-		date_df = xmmx["外部下单日期"] == date
-		this_df.loc[date, "订单量"] = xmmx[date_df]["外部订单号"].count()
-		this_df.loc[date, "激活量"] = xmmx[date_df]["入网时间"].count()
-		this_df.loc[date, "首充≥50"] = xmmx[date_df]["首充≥50"].count()
-		this_df.loc[date, "当日激活"] = xmmx[xmmx["激活日期"] == date]["激活日期"].count()
-		this_df.loc[date, "当日产能"] = xmmx[xmmx["首次充值日期"] == date]["首充≥50"].count()
+		date_df = mx["外部下单日期"] == date
+		this_df.loc[date, "订单量"] = mx[date_df]["外部订单号"].count()
+		this_df.loc[date, "激活量"] = mx[date_df]["入网时间"].count()
+		this_df.loc[date, "首充≥50"] = mx[date_df]["首充≥50"].count()
+		this_df.loc[date, "当日激活"] = mx[mx["激活日期"] == date]["激活日期"].count()
+		this_df.loc[date, "当日产能"] = mx[mx["首次充值日期"] == date]["首充≥50"].count()
 	this_df.loc["%s月汇总" % this_dates[0][5:7]] = this_df.apply(lambda x: x.sum())
 	try:
 		this_df["激活率"] = (this_df["激活量"] / this_df["订单量"]).apply(lambda x: format(x, ".2%"))
@@ -134,27 +151,20 @@ def get_img(xm):
 		this_df["充值率"] = format(0, ".2%")
 		this_df["综转率"] = format(0, ".2%")
 
-	return this_df
+	df = prev_df.append(this_df)
+	return df
 
 def run_jf():
 	with sqlite3.connect(db) as conn:
 		c = conn.cursor()
-		c.execute("DELETE FROM xm_img;") # 删除所有xm_img内容，以便重新插入
+		c.execute("DELETE FROM key_img;") # 删除所有key_img内容，以便重新插入
 		for xm in xm_set:
-			draw_jpg(xm, get_img(xm))
-			print("%s绘制结束" % xm)
-		for xm, img in xm_img.items():
-			c.execute("INSERT INTO xm_img VALUES (?, ?)", (xm, img))
-	return xm_img
-
-def test():
-	xm_time = {}
-	for xm in xm_set:
-		starttime = time.time()
-		draw_jpg(xm, get_img(xm))
-		pay_time = time.strftime("%M-%S", time.localtime(time.time() - starttime))
-		xm_time[xm] = pay_time
-		print("%s: %s" % (xm, pay_time))
+			draw_jpg(key=xm, title=xm, df=get_img(head="项目", key=xm))
+		for hyb in hyb_set:
+			draw_jpg(key=hyb, title="%s行业部" % hyb, df=get_img(head="行业部", key=hyb))
+		for key, img in key_img.items():
+			c.execute("INSERT INTO key_img VALUES (?, ?)", (key, img))
+	return key_img
 
 if __name__ == "__main__":
 	# test()
