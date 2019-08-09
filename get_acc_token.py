@@ -1,22 +1,12 @@
 # coding: utf-8
 
-import requests, json, sqlite3, time, os
-
-url="https://api.weixin.qq.com/cgi-bin/token" # 获取access_token的url
-appid="wxf9d2bfcde559934c" # 公众号appid
-db = "db.db" # 数据库名称
-passwd_file = "passwd/gzh_passwd.txt" # 公众号密码文件
-
-def get_passwd():
-	# 获取公众号密码
-	if os.path.exists(passwd_file):
-		with open(passwd_file, "r") as f:
-			passwd = f.readline().strip()
-	else:
-		passwd = input("请输入公众号密码：")
-	return passwd
+import requests, json, sqlite3, time
+from my_flask.my_tools import get_gzh_passwd
 
 def get_token():
+	url = "https://api.weixin.qq.com/cgi-bin/token"  # 获取access_token的url
+	appid = "wxf9d2bfcde559934c"  # 公众号appid
+	db = "db.db"  # 数据库名称
 	with sqlite3.connect(db) as conn:
 		c = conn.cursor()
 		c.execute("SELECT * FROM access_token") # 从数据库获取access_token和token_time
@@ -35,7 +25,7 @@ def get_token():
 			data = {
 				"grant_type": "client_credential", # 获取access_token填写client_credential
 				"appid": appid, # 公众号id
-				"secret": get_passwd() # 公众号密码
+				"secret": get_gzh_passwd() # 公众号密码
 			}
 
 			headers = {

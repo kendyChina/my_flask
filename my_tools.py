@@ -1,7 +1,9 @@
 # coding: utf-8
 
-import paramiko, os, time
+import paramiko, os, time, hashlib, logging
 import matplotlib.pyplot as plt
+import pandas as pd
+
 
 def to_str(bytes_or_str):
     """
@@ -62,7 +64,7 @@ class SSHConnection(object):
     def __del__(self):
         self.close()
 
-class draw_table_save(object):
+class DrawTableSave(object):
 
 	def __init__(self, key, title, df, size_inches=(10.0/1.5, 15.0/1.5), colWidths=0.15, fontsize=18, title_x=0.35, target_path=r"img", target_format="jpg"):
 		self.key = key
@@ -181,3 +183,82 @@ class draw_table_save(object):
 
 	def __del__(self):
 		self.close()
+
+class GetPasswd(object):
+
+	def __init__(self, file_path, passwd_name):
+		self.file_path = file_path
+		self.passwd_name = passwd_name
+
+	def get_it(self):
+		if os.path.exists(self.file_path):
+			with open(self.file_path) as f:
+				passwd = f.readline().strip()
+		else:
+			passwd = input("请输入%s密码：", self.passwd_name)
+		return passwd
+
+def get_ssh_passwd():
+	"""
+    通过配置文件，
+    获取ssh密码
+    :return:
+    """
+	gp = GetPasswd("passwd/ssh_passwd.txt", "ssh")
+	passwd = gp.get_it()
+	return passwd
+
+def get_gzh_passwd():
+	"""
+	获取公众号密码
+	:return:
+	"""
+	gp = GetPasswd("passwd/gzh_passwd.txt", "gzh")
+	passwd = gp.get_it()
+	return passwd
+
+def get_yan_passwd():
+	"""
+	获取加密用的yan
+	:return:
+	"""
+	gp = GetPasswd("passwd/yan_passwd.txt", "yan")
+	passwd = gp.get_it()
+	return passwd
+
+def to_md5(key):
+	yan = get_yan_passwd()
+	try:
+		key = key.encode("utf-8")
+		yan = yan.encode("utf-8")
+	except:
+		pass
+	finally:
+		key_md5 = hashlib.md5(key + yan)
+		return key_md5.hexdigest()
+
+def get_logger():
+	# 配置logger
+	logger = logging.getLogger("logger")
+
+	handler1 = logging.StreamHandler()
+	handler2 = logging.FileHandler(filename="log/scheduler.log", encoding="utf-8", mode="a+")
+
+	logger.setLevel(logging.DEBUG)
+	handler1.setLevel(logging.DEBUG)
+	handler2.setLevel(logging.INFO)
+
+	formatter = logging.Formatter("%(asctime)s:%(levelname)s:%(message)s")
+	handler1.setFormatter(formatter)
+	handler2.setFormatter(formatter)
+
+	logger.addHandler(handler1)
+	logger.addHandler(handler2)
+
+	return logger
+
+if __name__ == '__main__':
+	# for result in [get_ssh_passwd(), get_gzh_passwd(), get_yan_passwd()]:
+	# 	print(result)
+	result = to_md5("盛华")
+	print(result)

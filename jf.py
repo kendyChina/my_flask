@@ -1,21 +1,24 @@
 # coding: utf-8
 
-import os, time, datetime
+import time, datetime
 import pandas as pd
-import numpy as np
 import seaborn as sns
-import matplotlib.pyplot as plt
 import sqlite3
+from my_flask.my_tools import DrawTableSave, to_md5, get_logger
+# 明细路径
+mx_file = r"csv/jf.csv"
+# 输出目标文件夹
+target_path = r"img"
+# 设置字体风格
+sns.set_style({"font.sans-serif": ["simhei", "Arial"]})
+# 数据库名称
+db = "db.db"
+# 读取csv文件
+jf = pd.read_csv(mx_file, encoding="gbk")
+# 初始化logger
+logger = get_logger()
 
-mx_file = r"csv/jf.csv" # 明细路径
-target_path = r"img" # 输出目标文件夹
-
-sns.set_style({"font.sans-serif": ["simhei", "Arial"]}) # 设置字体风格
-
-db = "db.db" # 数据库名称
-
-jf = pd.read_csv(mx_file, encoding="gbk") # 读取csv文件
-
+# 增加辅助字段
 jf["外部下单日期"] = jf["外部下单时间"].map(lambda x: str(x)[:10]) # 获取外部下单日期，前十位
 jf["激活日期"] = jf["入网时间"].map(lambda x: str(x)[:10]) # 获取激活日期，前十位
 jf["首次充值日期"] = jf["首次充值时间"].map(lambda x: str(x)[:10]) # 获取首充日期，前十位
@@ -25,68 +28,12 @@ jf["充值月份"] = jf["充值月份"].map(lambda x: str(x)[:6])
 
 xm_set = set(jf["项目"]) # 项目set
 hyb_set = set(jf["行业部"]) # 行业部set
-key_img = {}
 
-def draw_jpg(key, title, df):
-
-	# 隔行设置row颜色：灰白相间
-	rowcolor = []
-	for i in range(len(df.index)):
-		if i % 2 == 0:
-			rowcolor.append("#DCDCDC") # 浅灰
-		else:
-			rowcolor.append("white")
-
-	# 隔行设置cell颜色：灰白相间
-	cellcolor = []
-	for i in range(len(df.index)):
-		if i % 2 == 0:
-			color = "#DCDCDC" # 浅灰
-		else:
-			color = "white"
-		cellcolor.append([color for x in range(len(df.columns))])
-
-	# 设置表格样式
-	plt.table(
-		cellText=df.values,
-		colLabels=df.columns,
-		colWidths=[0.15]*len(df.columns),
-		rowLabels=df.index,
-		loc="best",
-		cellLoc="center",
-		colLoc="center",
-		rowLoc="center",
-		rowColours=rowcolor,
-		cellColours=cellcolor
-	)
-
-	# 关闭坐标轴
-	plt.xticks([])
-	plt.yticks([])
-
-	plt.axis("off")
-
-	plt.title(
-		"%s订单情况(%s日)" % (title, time.strftime("%m-%d", time.localtime(time.time()))),
-		fontsize=18,
-		verticalalignment="center",
-		# horizontalalignment="left",
-		fontweight="black",
-		color="#000000",
-		x=0.35
-	) # 设置标题
-
-	plt.gcf().set_size_inches(10.0/1.5, 15.0/1.5)
-	target = os.path.join(target_path, r"%s.jpg" % key) # 保存为jpg
-	plt.savefig(target, bbox_inches="tight", pad_inches=0.5)
-	plt.close()
-
-	key_img[key] = target
-
-# 获取本月的index
-# 及上个月的年月，首日
 def get_two_month_dates():
-	# 获取本月的年月
+	"""
+	获取本月的年月
+	:return:
+	"""
 	this_year = datetime.datetime.now().year
 	this_month = datetime.datetime.now().month
 
@@ -108,7 +55,7 @@ def get_two_month_dates():
 
 	return (this_dates, prev_year_month, prev_first_day)
 
-def get_img(head, key):
+def get_table(head, key):
 
 	mx = jf[jf[head] == key] # 明细
 
@@ -154,19 +101,77 @@ def get_img(head, key):
 	df = prev_df.append(this_df)
 	return df
 
+def get_hyb_total():
+	"""
+	获取行业部整体通报
+	:return:
+	"""
+	columns = ["已上线项目(电渠)", "昨日订单(电渠)", "本月总订单(电渠)", "昨日产能(电渠)", "本月总产能(电渠)", "本月日均产能(电渠)", "其中:中高端(电渠)", "本月电渠占比", "时序进度",
+			   "昨日订单(整体)", "本月总订单(整体)", "昨日产能(整体)", "本月总产能(整体)", "本月日均产能(整体)"]
+	index = set(jf["行业部"])
+	df = pd.DataFrame(data=None, index=index, columns=columns)
+
+	for hyb in index:
+		yesterday = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+		df.loc[hyb, "昨日订单(整体)"] = jf[(jf["行业部"] == hyb) & (jf["外部下单日期"] == yesterday)]["外部订单号"].count()
+		this_month = datetime.datetime.now().strftime("%Y-%m")
+		df.loc[hyb, "本月总订单(整体)"] = jf[(jf["行业部"] == hyb) & (jf["下单月份"] == this_month)]["外部订单号"].count()
+		df.loc[hyb, "昨日产能(整体)"] = jf[(jf["行业部"] == hyb) & (jf["激活日期"] == yesterday)]["外部订单号"].count()
+		this_month2 = datetime.datetime.now().strftime("%Y%m")
+		df.loc[hyb, "本月总产能(整体)"] = jf[(jf["行业部"] == hyb) & (jf["激活月份"] == this_month2)]["外部订单号"].count()
+		df.loc[hyb, "已上线项目(电渠)"] = len(set(jf[(jf["行业部"] == hyb) & (jf["渠道"] == "电子")]["项目"]))
+		df.loc[hyb, "昨日订单(电渠)"] = jf[(jf["行业部"] == hyb) & (jf["外部下单日期"] == yesterday) & (jf["渠道"] == "电子")]["外部订单号"].count()
+		df.loc[hyb, "本月总订单(电渠)"] = jf[(jf["行业部"] == hyb) & (jf["下单月份"] == this_month) & (jf["渠道"] == "电子")]["外部订单号"].count()
+		df.loc[hyb, "昨日产能(电渠)"] = jf[(jf["行业部"] == hyb) & (jf["激活日期"] == yesterday) & (jf["渠道"] == "电子")]["外部订单号"].count()
+		df.loc[hyb, "本月总产能(电渠)"] = jf[(jf["行业部"] == hyb) & (jf["激活月份"] == this_month2) & (jf["渠道"] == "电子")]["外部订单号"].count()
+		df.loc[hyb, "其中:中高端(电渠)"] = jf[(jf["行业部"] == hyb) & (jf["激活月份"] == this_month2) & (jf["套餐名称"].str.contains("冰")) & (jf["渠道"] == "电子")]["外部订单号"].count()
+		# 任务日均310
+	# print(jf.loc[jf["套餐名称"].str.contains("冰")])
+
+	assignment = 310
+	days = int(yesterday[-2:])
+	df["本月日均产能(整体)"] = df["本月总产能(整体)"] / days
+	df["本月日均产能(电渠)"] = df["本月总产能(电渠)"] / days
+	df["本月电渠占比"] = (df["本月总产能(电渠)"] / df["本月总产能(整体)"]).apply(lambda x: format(x, ".2%"))
+	df["时序进度"] = (df["本月总产能(电渠)"] / (assignment * days)).apply(lambda x: format(x, ".2%"))
+
+	return df
+
 def run_jf():
+	key_img = {}  # key_img对应关系
 	with sqlite3.connect(db) as conn:
 		c = conn.cursor()
 		c.execute("DELETE FROM key_img;") # 删除所有key_img内容，以便重新插入
 		for xm in xm_set:
-			draw_jpg(key=xm, title=xm, df=get_img(head="项目", key=xm))
+			dts = DrawTableSave(key=xm, title="%s订单情况" % xm, df=get_table(head="项目", key=xm))
+			dts.init_color()
+			dts.init_plt()
+			result = dts.draw_and_save()
+			key_img.update(result)
+			logger.debug("%s已绘制成功" % xm)
 		for hyb in hyb_set:
-			draw_jpg(key=hyb, title="%s行业部" % hyb, df=get_img(head="行业部", key=hyb))
+			dts = DrawTableSave(key=hyb, title="%s行业部订单情况" % hyb, df=get_table(head="行业部", key=hyb))
+			dts.init_color()
+			dts.init_plt()
+			result = dts.draw_and_save()
+			key_img.update(result)
+			logger.debug("%s已绘制成功" % hyb)
+		dts = DrawTableSave(key="行业部达产通报", title="行业部达产通报", df=get_hyb_total(), size_inches=(20.0 / 1.5, 10.0 / 1.5))
+		dts.set_title_x(0.05)
+		dts.init_color()
+		dts.init_plt()
+		result = dts.draw_and_save()
+		key_img.update(result)
+		logger.debug("%s已绘制成功" % "行业部达产通报")
 		for key, img in key_img.items():
-			c.execute("INSERT INTO key_img VALUES (?, ?)", (key, img))
+			c.execute("INSERT INTO key_img VALUES (?, ?)", (to_md5(key), img))
 	return key_img
 
 if __name__ == "__main__":
-	# test()
+	# dts = DrawTableSave(key="行业部达产通报", title="行业部达产通报", df=get_hyb_total(), size_inches=(20.0/1.5, 10.0/1.5))
+	# dts.set_title_x(0.05)
+	# dts.init_color()
+	# dts.init_plt()
+	# dts.draw_and_save()
 	run_jf()
 	# 返回项目和图片的对应关系
