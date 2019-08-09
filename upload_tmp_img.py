@@ -37,7 +37,7 @@ def upload_tmp_img():
 				print(e)
 			key_id[key] = media_id
 			# 把key和media_id记录到数据库
-			c.execute("INSERT INTO key_media VALUES (?, ?)", (to_md5(key), media_id))
+			c.execute("INSERT INTO key_media VALUES (?, ?)", (key, media_id))
 			logger.debug("%s获取media_id成功，并成功插入数据库", key)
 		logger.info("media_id获取成功，并成功插入数据库")
 
