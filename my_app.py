@@ -77,16 +77,24 @@ def index():
 					media_id = None
 
 			if media_id is not None: # 后台有该字段的数据
-				resp = make_response(img_msg % (FromUserName, ToUserName, str(int(time.time())), media_id))
+				my_content = img_msg % (FromUserName, ToUserName, str(int(time.time())), media_id)
+				resp = make_response(my_content)
+				logger.debug(my_content)
 			else: # 暂无该字段数据
-				resp = make_response(text_msg % (FromUserName, ToUserName, str(int(time.time())), content))
-
-		elif msg_type == "event" and event == "subscribe":
+				my_content = text_msg % (FromUserName, ToUserName, str(int(time.time())), content)
+				resp = make_response(my_content)
+				logger.debug(my_content)
+		elif msg_type == "event":
 			event = xmlData.find("Event").text  # 事件内容
-			content2 = "感谢您的关注，请回复进行测试：\n8a83871129c8d4809581ae156ddbb78e"
-			resp = make_response(text_msg % (FromUserName, ToUserName, str(int(time.time())), content2))
+			if event == "subscribe":
+				my_content = "感谢您的关注，请回复进行测试：\n8a83871129c8d4809581ae156ddbb78e"
+				resp = make_response(text_msg % (FromUserName, ToUserName, str(int(time.time())), my_content))
+				logger.debug(my_content)
+			elif event == "unsubscribe":
+				pass
 		else:
-			resp = make_response(text_msg % (FromUserName, ToUserName, str(int(time.time())), "系统有bug..."))
+			my_content = text_msg % (FromUserName, ToUserName, str(int(time.time())), "系统有bug...")
+			resp = make_response(my_content)
 			logger.info("自动回复系统异常，msg_type匹不上")
 
 		resp.content_type = "application/xml"
