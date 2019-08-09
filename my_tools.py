@@ -4,7 +4,6 @@ import paramiko, os, time, hashlib, logging
 import matplotlib.pyplot as plt
 import pandas as pd
 
-
 def to_str(bytes_or_str):
     """
     把bytes转换成str
@@ -258,4 +257,4 @@ def get_logger():
 	return logger
 
 if __name__ == '__main__':
-	print(to_md5("行业部达产通报"))
+	pass

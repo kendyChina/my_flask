@@ -1,9 +1,10 @@
 # coding: utf-8
 
 from flask import Flask, request, make_response
-import hashlib, time, sqlite3
+import hashlib, time, sqlite3, requests, json
 import xml.etree.ElementTree as ET
-from my_flask.my_tools import to_md5, get_logger
+from my_flask.my_tools import get_logger
+from my_flask.get_acc_token import get_token
 
 app = Flask(__name__)
 access_token = None
@@ -11,6 +12,14 @@ access_token = None
 logger = get_logger()
 
 db = "db.db"
+
+def get_callback_ip():
+	url = "https://api.weixin.qq.com/cgi-bin/getcallbackip"
+	params = {"access_token": "24_JiyqubD_qaS4eppFXKtkP99TU24MEmsMNVny5UVwtIedRya31Fj24voafpHAxK3XpoyqA7QW44tsYkN0gEp86JNJLbQwiUgPw_KBmVOVno3r1mvteEenDJZefqkDDy0UqbLIZsYE_3C9yeZfMYMfAGAUGU"}
+	resp = requests.get(url, params)
+	ip_list = json.loads(resp.content.decode("utf-8"))["ip_list"]
+	return ip_list
+
 
 img_msg = """
 	<xml>
@@ -101,4 +110,4 @@ def index():
 		return resp
 
 if __name__ == "__main__":
-	app.run(host="0.0.0.0", port="80")
+	app.run(host="0.0.0.0", port=80)
