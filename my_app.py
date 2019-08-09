@@ -61,23 +61,29 @@ def index():
 	else:
 
 		xmlData = ET.fromstring(request.stream.read()) # 读取XML
-		# msg_type = xmlData.find('MsgType').text
-		ToUserName = xmlData.find('ToUserName').text # 用户信息的目的user
-		FromUserName = xmlData.find('FromUserName').text # 用户信息的来源user
-		content = xmlData.find('Content').text # 用户信息的内容
+		msg_type = xmlData.find("MsgType").text
+		ToUserName = xmlData.find("ToUserName").text # 用户信息的目的user
+		FromUserName = xmlData.find("FromUserName").text # 用户信息的来源user
+		content = xmlData.find("Content").text # 用户信息的内容
+		event = xmlData.find("Event").text # 时间内容
 
-		with sqlite3.connect(db) as conn:
-			c = conn.cursor()
-			c.execute("SELECT media_id FROM key_media WHERE key=?", (to_md5(content), ))
-			try:
-				media_id = c.fetchone()[0]
-			except:
-				media_id = None
+		if msg_type == "text":
+			with sqlite3.connect(db) as conn:
+				c = conn.cursor()
+				c.execute("SELECT media_id FROM key_media WHERE key=?", (to_md5(content), ))
+				try:
+					media_id = c.fetchone()[0]
+				except:
+					media_id = None
 
-		if media_id is not None: # 后台有该字段的数据
-			resp = make_response(img_msg % (FromUserName, ToUserName, str(int(time.time())), media_id))
-		else: # 暂无该字段数据
-			resp = make_response(text_msg % (FromUserName, ToUserName, str(int(time.time())), content))
+			if media_id is not None: # 后台有该字段的数据
+				resp = make_response(img_msg % (FromUserName, ToUserName, str(int(time.time())), media_id))
+			else: # 暂无该字段数据
+				resp = make_response(text_msg % (FromUserName, ToUserName, str(int(time.time())), content))
+
+		elif msg_type == "event" and event == "subscribe":
+			content2 = "感谢您的关注，请回复进行测试：\n8a83871129c8d4809581ae156ddbb78e"
+			resp = make_response(text_msg % (FromUserName, ToUserName, str(int(time.time())), content2))
 		resp.content_type = "application/xml"
 		return resp
 

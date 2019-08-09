@@ -1,7 +1,9 @@
 # coding: utf-8
 
 import requests, json, sqlite3, time
-from my_flask.my_tools import get_gzh_passwd
+from my_flask.my_tools import get_gzh_passwd, get_logger
+
+logger = get_logger()
 
 def get_token():
 	url = "https://api.weixin.qq.com/cgi-bin/token"  # 获取access_token的url
@@ -21,7 +23,7 @@ def get_token():
 		# 如果现在超时时间前5分钟多，获取新的access_token
 		if time.time() > token_time - 300:
 
-			print("token_time(%s)快超时了，正在尝试获取新access_token..." % (time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(token_time)), ))
+			logger.info("token_time(%s)快超时了，正在尝试获取新access_token..." % (time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(token_time)), ))
 			data = {
 				"grant_type": "client_credential", # 获取access_token填写client_credential
 				"appid": appid, # 公众号id
@@ -38,7 +40,7 @@ def get_token():
 				access_token = resp["access_token"]
 				expires_in = resp["expires_in"]
 			except Exception as e:
-				print(e)
+				logger.debug(resp)
 				access_token = None
 				expires_in = None
 			token_time = time.time() + expires_in

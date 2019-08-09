@@ -258,7 +258,4 @@ def get_logger():
 	return logger
 
 if __name__ == '__main__':
-	# for result in [get_ssh_passwd(), get_gzh_passwd(), get_yan_passwd()]:
-	# 	print(result)
-	result = to_md5("盛华")
-	print(result)
+	print(to_md5("行业部达产通报"))

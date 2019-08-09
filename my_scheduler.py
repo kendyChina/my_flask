@@ -4,7 +4,7 @@ import schedule, datetime, requests, hashlib, os
 from my_flask.my_tools import SSHConnection, get_ssh_passwd, get_logger
 
 temp_file = r"csv/jf.csv"
-remote_file = r"$HOME/my_flask/csv/jf.csv"
+remote_file = r"/home/kendy/my_flask/csv/jf.csv"
 
 logger = get_logger()
 
@@ -42,25 +42,26 @@ def run_remote():
     :return:
     """
     host_dict = {
-        "host": "139.155.117.186",
+        "host": "101.37.77.27",
         "port": 22,
         "username": "kendy",
         "passwd": get_ssh_passwd()
     }
-    chdir = "cd %s;" % os.path.join("/home/code/", os.path.dirname(__file__).split("/")[-1])
-    export_pypath = "export PYTHONPATH=$PYTHONPATH:/home/code;"
+    workon = "workon my_flask;"
+    chdir = "cd /home/kendy/my_flask;"
+    export_pypath = "export PYTHONPATH=$PYTHONPATH:$HOME;"
     ssh = SSHConnection(host_dict)
     ssh.connect()
     logger.info("开始上传经分明细...")
     starttime = datetime.datetime.now()
     ssh.upload(temp_file, remote_file)
     endtime = datetime.datetime.now()
-    logger.info("经分明细上传成功！耗时[%s]" % endtime-starttime)
+    logger.info("经分明细上传成功！耗时[%s]" % (endtime - starttime, ))
     for py_file in ["jf.py", "upload_tmp_img.py"]:
         logger.info("开始运行%s..." % py_file)
         try:
             starttime = datetime.datetime.now()
-            resp = ssh.run_cmd(chdir + export_pypath + "python %s" % py_file)
+            resp = ssh.run_cmd(workon + chdir + export_pypath + "python %s" % py_file)
             endtime = datetime.datetime.now()
             logger.debug(resp)
             logger.info("%s运行成功！耗时[%s]" % (py_file, endtime-starttime))
@@ -78,10 +79,11 @@ def test():
     print("test!")
 
 if __name__ == "__main__":
-    logger.debug("开始执行schedule...")
-    run()
-    # schedule是先计时后执行，因此先执行一遍
-    schedule.every(10).minutes.do(run)
-
-    while True:
-        schedule.run_pending()
+    # logger.debug("开始执行schedule...")
+    # run()
+    #
+    # schedule.every(10).minutes.do(run) # schedule是先计时后执行，因此先执行一遍
+    #
+    # while True:
+    #     schedule.run_pending()
+    run_remote()
