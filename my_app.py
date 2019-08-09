@@ -65,10 +65,9 @@ def index():
 		msg_type = xmlData.find("MsgType").text
 		ToUserName = xmlData.find("ToUserName").text # 用户信息的目的user
 		FromUserName = xmlData.find("FromUserName").text # 用户信息的来源user
-		content = xmlData.find("Content").text # 用户信息的内容
-		event = xmlData.find("Event").text # 时间内容
 
 		if msg_type == "text":
+			content = xmlData.find("Content").text  # 用户信息的内容
 			with sqlite3.connect(db) as conn:
 				c = conn.cursor()
 				c.execute("SELECT media_id FROM key_media WHERE key=?", (to_md5(content), ))
@@ -83,6 +82,7 @@ def index():
 				resp = make_response(text_msg % (FromUserName, ToUserName, str(int(time.time())), content))
 
 		elif msg_type == "event" and event == "subscribe":
+			event = xmlData.find("Event").text  # 事件内容
 			content2 = "感谢您的关注，请回复进行测试：\n8a83871129c8d4809581ae156ddbb78e"
 			resp = make_response(text_msg % (FromUserName, ToUserName, str(int(time.time())), content2))
 		else:
