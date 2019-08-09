@@ -1,7 +1,7 @@
 # coding: utf-8
 import requests, json, sqlite3
 from my_flask.get_acc_token import get_token
-from my_flask.my_tools import to_md5, get_logger
+from my_flask.my_tools import get_logger
 
 url = r"https://api.weixin.qq.com/cgi-bin/media/upload"
 db = "db.db"

@@ -1,13 +1,14 @@
 # coding: utf-8
 
 from flask import Flask, request, make_response
-import hashlib, time, sqlite3, logging
+import hashlib, time, sqlite3
 import xml.etree.ElementTree as ET
-from my_flask.my_tools import to_md5
+from my_flask.my_tools import to_md5, get_logger
 
 app = Flask(__name__)
 access_token = None
-logging.basicConfig(filename="log/my_app.log")
+
+logger = get_logger()
 
 db = "db.db"
 
@@ -84,6 +85,10 @@ def index():
 		elif msg_type == "event" and event == "subscribe":
 			content2 = "感谢您的关注，请回复进行测试：\n8a83871129c8d4809581ae156ddbb78e"
 			resp = make_response(text_msg % (FromUserName, ToUserName, str(int(time.time())), content2))
+		else:
+			resp = make_response(text_msg % (FromUserName, ToUserName, str(int(time.time())), "系统有bug..."))
+			logger.info("自动回复系统异常，msg_type匹不上")
+
 		resp.content_type = "application/xml"
 		return resp
 
