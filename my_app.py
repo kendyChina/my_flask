@@ -70,7 +70,7 @@ def index():
 			content = xmlData.find("Content").text  # 用户信息的内容
 			with sqlite3.connect(db) as conn:
 				c = conn.cursor()
-				c.execute("SELECT media_id FROM key_media WHERE key=?", (to_md5(content), ))
+				c.execute("SELECT media_id FROM key_media WHERE key=?", (content, ))
 				try:
 					media_id = c.fetchone()[0]
 				except:
