@@ -30,7 +30,7 @@ text_msg = """
 	<FromUserName><![CDATA[%s]]></FromUserName>
 	<CreateTime>%s</CreateTime>
 	<MsgType><![CDATA[text]]></MsgType>
-	<Content><![CDATA[%s暂无后台数据]]></Content>
+	<Content><![CDATA[%s]]></Content>
 </xml>
 """
 
@@ -81,7 +81,7 @@ def index():
 				resp = make_response(my_content)
 				logger.debug(my_content)
 			else: # 暂无该字段数据
-				my_content = text_msg % (FromUserName, ToUserName, str(int(time.time())), content)
+				my_content = text_msg % (FromUserName, ToUserName, str(int(time.time())), content + "暂无后台数据")
 				resp = make_response(my_content)
 				logger.debug(my_content)
 		elif msg_type == "event":
