@@ -22,3 +22,6 @@ test*
 
 # log
 log/
+
+# db
+*.db
