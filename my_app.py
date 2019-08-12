@@ -15,7 +15,7 @@ db = "db.db"
 
 def get_callback_ip():
 	url = "https://api.weixin.qq.com/cgi-bin/getcallbackip"
-	params = {"access_token": "24_JiyqubD_qaS4eppFXKtkP99TU24MEmsMNVny5UVwtIedRya31Fj24voafpHAxK3XpoyqA7QW44tsYkN0gEp86JNJLbQwiUgPw_KBmVOVno3r1mvteEenDJZefqkDDy0UqbLIZsYE_3C9yeZfMYMfAGAUGU"}
+	params = {"access_token": get_token()}
 	resp = requests.get(url, params)
 	ip_list = json.loads(resp.content.decode("utf-8"))["ip_list"]
 	return ip_list
@@ -50,22 +50,25 @@ def index():
 	# 如相等则返回echostr
 	if request.method == "GET":
 
-		token = "kendy123"
-		signature = request.args.get("signature")
-		echostr = request.args.get("echostr")
-		timestamp = request.args.get("timestamp")
-		nonce = request.args.get("nonce")
-		l = [token, timestamp, nonce]
-		try:
+		if request.url in get_callback_ip():
+			token = "kendy123"
+			signature = request.args.get("signature")
+			echostr = request.args.get("echostr")
+			timestamp = request.args.get("timestamp")
+			nonce = request.args.get("nonce")
+			l = [token, timestamp, nonce]
 			l.sort()
-		except Exception:
-			print(request.url)
-		ll = ''.join(l)
-		my_sha1 = hashlib.sha1(ll.encode("utf-8"))
-		my_sign = my_sha1.hexdigest()
-		if my_sign == signature:
-			return echostr
+			ll = ''.join(l)
+			my_sha1 = hashlib.sha1(ll.encode("utf-8"))
+			my_sign = my_sha1.hexdigest()
+			if my_sign == signature:
+				logger.info("my_sign == signature，返回echostr")
+				return echostr
+			else:
+				logger.info("my_sign != signature，返回False")
+				return False
 		else:
+			logger.info("url不在ip_list中：method=%s，url=%s，path=%s，args=%s" % (request.method, request.url, request.path, request.args.to_dict()))
 			return False
 	# 接收用户主动发送的信息
 	else:
@@ -88,23 +91,23 @@ def index():
 			if media_id is not None: # 后台有该字段的数据
 				my_content = img_msg % (FromUserName, ToUserName, str(int(time.time())), media_id)
 				resp = make_response(my_content)
-				logger.debug(my_content)
+				logger.info("后台有数据：FromUserName=%s，MsgType=%s，Content=%s" % (FromUserName, msg_type, content))
 			else: # 暂无该字段数据
 				my_content = text_msg % (FromUserName, ToUserName, str(int(time.time())), content + "暂无后台数据")
 				resp = make_response(my_content)
-				logger.debug(my_content)
+				logger.info("后台无数据：FromUserName=%s，MsgType=%s，Content=%s" % (FromUserName, msg_type, content))
 		elif msg_type == "event":
 			event = xmlData.find("Event").text  # 事件内容
 			if event == "subscribe":
 				my_content = "感谢您的关注，请回复进行测试：\n8a83871129c8d4809581ae156ddbb78e"
 				resp = make_response(text_msg % (FromUserName, ToUserName, str(int(time.time())), my_content))
-				logger.debug(my_content)
+				logger.info("新增订阅：FromUserName=%s，MsgType=%s，Event=%s" % (FromUserName, msg_type, event))
 			elif event == "unsubscribe":
-				pass
+				logger.info("减少订阅：FromUserName=%s，MsgType=%s，Event=%s" % (FromUserName, msg_type, event))
 		else:
 			my_content = text_msg % (FromUserName, ToUserName, str(int(time.time())), "系统有bug...")
 			resp = make_response(my_content)
-			logger.info("自动回复系统异常，msg_type匹不上")
+			logger.info("msg_type匹不上：FromUserName=%s，msg_type=%s" % (FromUserName, msg_type))
 
 		resp.content_type = "application/xml"
 		return resp
