@@ -25,3 +25,6 @@ log/
 
 # db
 *.db
+
+# tmp
+*tmp*
